@@ -6,6 +6,9 @@ import conversion._
 import collection.immutable
 import org.joda.time.DateTime
 import java.util.Date
+import scalaz._
+import Scalaz._
+import validation._
 
 /**
 * Trait that identifies a ''Command object'', i.e. a Scala class instance which fields are bound to external parameters
@@ -52,7 +55,7 @@ trait Command extends BindingSyntax with ParamsValueReaderProperties {
 
   private[commands] var bindings: Map[String, Binding] = Map.empty
 
-  private[this] var _errors: Seq[Binding] = Nil
+  private[this] var _errors: List[ValidationError] = Nil
 
   var commandName = getClass.getSimpleName
 
@@ -68,15 +71,14 @@ trait Command extends BindingSyntax with ParamsValueReaderProperties {
    * Return a Map of all field command error keyed by field binding name (NOT the name of the variable in command
    * object).
    */
-  def errors: Seq[Binding] = _errors
+  def errors: List[ValidationError] = _errors
 
   /**
    * Perform command as afterBinding task.
    */
   afterBinding {
-    _errors = bindings.values.filter(_.isInvalid).toSeq
+    _errors = bindings.values.map(_.errors).toList.flatten
   }
-
 
   implicit def binding2field[T:DefaultValue:Manifest:TypeConverterFactory](field: FieldDescriptor[T]): Field[T] = {
     new Field(bind(field), this)

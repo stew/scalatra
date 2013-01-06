@@ -318,7 +318,7 @@ object ScalatraBuild extends Build {
 
     val logback = "ch.qos.logback" % "logback-classic" % "1.0.9"
 
-    val scalaz = "org.scalaz" %% "scalaz-core" % "6.0.4"
+    val scalaz = "org.scalaz" %% "scalaz-core" % "7.0-SNAPSHOT"
 
     val jodaTime = "joda-time" % "joda-time" % "2.1"
 

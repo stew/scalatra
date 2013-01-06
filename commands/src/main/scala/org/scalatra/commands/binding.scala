@@ -37,8 +37,8 @@ object Binding {
     implicit def typeConverter: TypeConverter[S, T] = null
     def apply(toBind: Either[String, Option[S]]): Binding = null
 
-    def validateWith(validators:BindingValidator[T]*): Binding =
-      new PartialBinding(field.validateWith(validators:_*))
+    def validateWith(validators:List[Validator[T]]): Binding =
+      new PartialBinding(field.validateWith(validators))
 
     def transform(transformer: (T) => T): Binding =
       new PartialBinding(field transform transformer)
@@ -64,8 +64,8 @@ object Binding {
     def transform(transformer: (T) => T): Binding =
       new DefaultBinding(field.transform(transformer), typeConverterFactory)(sourceManifest, sourceZero, valueManifest, valueZero, typeConverter)
 
-    def validateWith(validators:BindingValidator[T]*): Binding =
-      new DefaultBinding(field.validateWith(validators:_*), typeConverterFactory)(sourceManifest, sourceZero, valueManifest, valueZero, typeConverter)
+    def validateWith(validators: List[Validator[T]]): Binding =
+      new DefaultBinding(field.validateWith(validators), typeConverterFactory)(sourceManifest, sourceZero, valueManifest, valueZero, typeConverter)
 
     def apply(toBind: Either[String, Option[S]]): Binding =
       new DefaultBinding(field(toBind), typeConverterFactory)(sourceManifest, sourceZero, valueManifest, valueZero, typeConverter)
@@ -92,7 +92,10 @@ sealed trait Binding {
   def name: String = field.name
   def validation: FieldValidation[T] = field.value
   def value: Option[T] = field.value.toOption
-  def error: Option[ValidationError] = field.value.fold(_.some, _=>None)
+  def errors: List[ValidationError] = field.value match {
+    case Failure(nel) => nel.list
+    case Success(_) => List()
+  }
 
   def isValid = validation.isSuccess
   def isInvalid = validation.isFailure
@@ -108,7 +111,7 @@ sealed trait Binding {
   implicit def sourceManifest: Manifest[S]
   implicit def sourceZero: DefaultValue[S]
 
-  def validateWith(validators: BindingValidator[T]*): Binding
+  def validateWith(validators: List[Validator[T]]): Binding
   def transform(transformer: T => T): Binding
 
   def original: Option[S] = field match {
@@ -128,10 +131,7 @@ sealed trait Binding {
 
 }
 
-trait BindingSyntax extends BindingValidatorImplicits {
-
-
-
+trait BindingSyntax {
   implicit def asType[T:DefaultValue:Manifest](name: String): FieldDescriptor[T] = FieldDescriptor[T](name)
 
   def asBoolean(name: String): FieldDescriptor[Boolean] = FieldDescriptor[Boolean](name)
@@ -159,7 +159,7 @@ object BindingSyntax extends BindingSyntax
 *
 * @author mmazzarolo
 */
-trait BindingImplicits extends DefaultImplicitConversions with BindingValidatorImplicits {
+trait BindingImplicits extends DefaultImplicitConversions {
 
   implicit def stringToDateTime(implicit df: DateParser = JodaDateFormats.Web): TypeConverter[String, DateTime] =
     safeOption(df.parse)

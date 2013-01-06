@@ -9,7 +9,7 @@ import Scalaz._
 
 trait CommandHandler { 
   @transient private[this] val commandLogger: Logger = Logger[this.type]
-  def execute[S: Manifest](cmd: ModelCommand[S]): ModelValidation[S] = {
+  def execute[S: Manifest](cmd: ModelCommand[S]): FieldValidation[S] = {
     commandLogger.debug("Executing [%s].\n%s" format (cmd.getClass.getName, cmd))
     if (cmd.isValid) {
       val res = (allCatch withApply (serverError(cmd.getClass.getName, _))) {
@@ -23,20 +23,19 @@ trait CommandHandler {
       commandLogger.debug("Command [%s] executed %s." format (cmd.getClass.getName, resultLog))
       res
     } else {
-      val f = cmd.errors.map(_.validation) collect {
-        case Failure(e) ⇒ e
-      }
+      val f = cmd.errors
+
       commandLogger.debug("Command [%s] executed with %d failures.\n%s" format (cmd.getClass.getName, f.size, f.toList))
       NonEmptyList(f.head, f.tail: _*).fail
     }
   }
 
-  private[this] def serverError[R](cmdName: String, ex: Throwable): ModelValidation[R] = {
+  private[this] def serverError[R](cmdName: String, ex: Throwable): FieldValidation[R] = {
     commandLogger.error("There was an error while executing " + cmdName, ex)
     ValidationError("An error occurred while handling: " + cmdName, UnknownError).failNel[R]
   }
 
-  type Handler = PartialFunction[ModelCommand[_], ModelValidation[_]]
+  type Handler = PartialFunction[ModelCommand[_], FieldValidation[_]]
 
   protected def handle: Handler
 }
