@@ -11,10 +11,9 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.util.matching.Regex
 
 class BindingException(message: String) extends ScalatraException(message)
-
+/*
 
 object Binding {
-
   def apply[I, A](fieldName: String, cv: TypeConverter[I, A], tcf: TypeConverterFactory[_])(implicit mf: Manifest[I], df: DefaultValue[I], mt: Manifest[A], dt: DefaultValue[A]): Binding = {
     new DefaultBinding(FieldDescriptor[A](fieldName), tcf)(mf, df, mt, dt, cv)
   }
@@ -32,7 +31,6 @@ object Binding {
   private class PartialBinding[A](val field: FieldDescriptor[A])(implicit val valueManifest: Manifest[A], val valueZero: DefaultValue[A], val typeConverterFactory: TypeConverterFactory[A]) extends Binding {
     type T = A
     type S = Nothing
-    implicit def sourceManifest: Manifest[S] = null
     implicit def sourceZero: DefaultValue[S] = null
     implicit def typeConverter: TypeConverter[S, T] = null
     def apply(toBind: Either[String, Option[S]]): Binding = null
@@ -70,7 +68,7 @@ object Binding {
     def apply(toBind: Either[String, Option[S]]): Binding =
       new DefaultBinding(field(toBind), typeConverterFactory)(sourceManifest, sourceZero, valueManifest, valueZero, typeConverter)
 
-    def validate: Binding = {
+ def validate: Binding = {
       val nwFld = field.asInstanceOf[DataboundFieldDescriptor[S, T]].validate
       new DefaultBinding(nwFld, typeConverterFactory)(sourceManifest, sourceZero, valueManifest, valueZero, typeConverter)
     }
@@ -130,8 +128,10 @@ sealed trait Binding {
     "BindingContainer[%s](name: %s, value: %s, original: %s)".format(valueManifest.erasure.getSimpleName, name, validation, original)
 
 }
-
+ */
 trait BindingSyntax {
+}
+/*
   implicit def asType[T:DefaultValue:Manifest](name: String): FieldDescriptor[T] = FieldDescriptor[T](name)
 
   def asBoolean(name: String): FieldDescriptor[Boolean] = FieldDescriptor[Boolean](name)
@@ -152,7 +152,7 @@ trait BindingSyntax {
 
 object BindingSyntax extends BindingSyntax
 
-
+ */
 
 /**
 * Commonly-used field implementations factory.

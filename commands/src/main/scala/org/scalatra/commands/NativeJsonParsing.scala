@@ -9,8 +9,8 @@ trait NativeJsonParsing extends CommandSupport with NativeJsonValueReaderPropert
 
   override protected def bindCommand[T <: CommandType](newCommand: T)(implicit mf: Manifest[T]): T = {
     format match {
-      case "json" | "xml" => newCommand.bindTo(parsedBody, multiParams, request.headers)
-      case _ => newCommand.bindTo(params, multiParams, request.headers)
+      case "json" | "xml" => newCommand.bindTo(BodySource(parsedBody), multiParams, request.headers)
+      case _ => newCommand.bindTo(BodySource(params), multiParams, request.headers)
     }
     requestProxy.update(commandRequestKey[T], newCommand)
     newCommand

@@ -12,7 +12,8 @@ package object commands extends DefaultValues {
   type FieldValidation[T] = ValidationNEL[ValidationError, T]
   type StringValidation[T] = ValidationNEL[String, T]
 
-  type Validator[T] = (T) => StringValidation[T]
+  type Validator[T] = T => StringValidation[T]
+  type FieldValidator[T] = T => FieldValidation[T]
 
   type BindingAction = () => Any
 

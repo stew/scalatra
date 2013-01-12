@@ -6,7 +6,7 @@ import grizzled.slf4j.Logger
 import validation._
 import scalaz._
 import Scalaz._
-
+/*
 trait CommandHandler { 
   @transient private[this] val commandLogger: Logger = Logger[this.type]
   def execute[S: Manifest](cmd: ModelCommand[S]): FieldValidation[S] = {
@@ -39,3 +39,4 @@ trait CommandHandler {
 
   protected def handle: Handler
 }
+ */

@@ -9,6 +9,12 @@ import java.util.Date
 import scalaz._
 import Scalaz._
 import validation._
+import org.json4s._
+
+case class BodySource[T](data: T) {
+  def read[A](field: String)(implicit r: T => ValueReader[T, A]) : Either[String, Option[A]] = r(data).read(field)
+}
+
 
 /**
 * Trait that identifies a ''Command object'', i.e. a Scala class instance which fields are bound to external parameters
@@ -45,9 +51,15 @@ import validation._
 * @version 0.1
 *
 */
-
 trait Command extends BindingSyntax with ParamsValueReaderProperties {
 
+  private[this] var bindings: BindingList = BNil
+
+  def bindTo[S](data: BodySource[S], params: MultiParams, headers: Map[String,String]) {
+    bindings.bindTo(data, params, headers)
+  }
+}
+/*
   type CommandTypeConverterFactory[T] <: TypeConverterFactory[T]
   private[this] var preBindingActions: Seq[BindingAction] = Nil
 
@@ -123,7 +135,7 @@ trait Command extends BindingSyntax with ParamsValueReaderProperties {
     bindings = bindings map { case (name, b) =>
       val tcf = b.typeConverterFactory
       val cv = typeConverterBuilder(tcf.asInstanceOf[CommandTypeConverterFactory[_]])(data).asInstanceOf[TypeConverter[I, b.T]]
-      val fieldBinding = Binding(b.field, cv, b.typeConverterFactory)(mi, df, b.valueManifest, b.valueZero)
+      val fieldBinding = Binding(b.field, cv, tcf)(mi, df, b.valueManifest, b.valueZero)
       
       val result = b.field.valueSource match {
         case ValueSource.Body => fieldBinding(data.read(name).right.map(_ map (_.asInstanceOf[fieldBinding.S])))
@@ -133,7 +145,7 @@ trait Command extends BindingSyntax with ParamsValueReaderProperties {
           headersBinding(Right(headers.get(name).map(_.asInstanceOf[headersBinding.S])))
         case ValueSource.Path | ValueSource.Query =>
           val pv = typeConverterBuilder(tcf.asInstanceOf[CommandTypeConverterFactory[_]])(params).asInstanceOf[TypeConverter[Seq[String], b.T]]
-          val paramsBinding = Binding(b.field, pv, b.typeConverterFactory)(manifest[Seq[String]], implicitly[DefaultValue[Seq[String]]], b.valueManifest, b.valueZero)
+          val paramsBinding = Binding(b.field, pv, b.typeConverterFactory)(manifest[Seq[StrDeing]], implicitly[DefaultValue[Seq[String]]], b.valueManifest, b.valueZero)
           paramsBinding(params.read(name).right.map(_ map (_.asInstanceOf[paramsBinding.S])))
       }
       
@@ -168,3 +180,4 @@ trait ParamsOnlyCommand extends TypeConverterFactories with Command {
 //  def forceFromHeaders: Set[String]
 //}
 
+ */

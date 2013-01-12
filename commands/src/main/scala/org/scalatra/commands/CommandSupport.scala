@@ -16,6 +16,7 @@ trait CommandSupport extends ParamsValueReaderProperties { this: ScalatraSyntax 
 
   type CommandType <: Command
   
+/*
   private[this] val commandFactories: mutable.ConcurrentMap[Class[_], () => Command] = new ConcurrentHashMap[Class[_], () => Command].asScala
 
   def registerCommand[T <: Command](cmd: => T)(implicit mf: Manifest[T]) {
@@ -28,7 +29,7 @@ trait CommandSupport extends ParamsValueReaderProperties { this: ScalatraSyntax 
    * For every command type, creation and binding is performed only once and then stored into
    * a request attribute.
    */
-  def command[T <: CommandType](implicit mf: Manifest[T]): T = {
+  def command[T <: CommandType](implicit mf: Manifest[T]): FieldValidation[T] = {
     def createCommand = commandFactories.get(mf.erasure).map(_()).getOrElse(mf.erasure.newInstance()).asInstanceOf[T]
     commandOption[T] getOrElse bindCommand(createCommand)
   }
@@ -39,25 +40,23 @@ trait CommandSupport extends ParamsValueReaderProperties { this: ScalatraSyntax 
    * For every command type, creation and binding is performed only once and then stored into
    * a request attribute.
    */
-  def commandOrElse[T <: CommandType](factory: ⇒ T)(implicit mf: Manifest[T]): T = {
-    commandOption[T] getOrElse bindCommand(factory)
-  }
-
+ */
   protected def bindCommand[T <: CommandType](newCommand: T)(implicit mf: Manifest[T]): T = {
-    newCommand.bindTo(params, multiParams, request.headers)
+    newCommand.bindTo(BodySource(params), multiParams, request.headers)
     requestProxy.update(commandRequestKey[T], newCommand)
     newCommand
   }
+/*
+  def commandOption[T <: CommandType : Manifest] : Option[FieldValidation[T]] = requestProxy.get(commandRequestKey[T]).map(_.asInstanceOf[FieldValidation[T]])
 
-  def commandOption[T <: CommandType : Manifest] : Option[T] = requestProxy.get(commandRequestKey[T]).map(_.asInstanceOf[T])
-
+ */
   private[commands] def requestProxy: mutable.Map[String, Any] = request
 
   private[commands] def commandRequestKey[T <: CommandType : Manifest] = "_command_" + manifest[T].erasure.getName
-
+/*
   private class CommandRouteMatcher[T <: CommandType ](implicit mf: Manifest[T]) extends RouteMatcher {
 
-    override def apply(requestPath: String) = if (command[T].isValid) Some(MultiMap()) else None
+    override def apply(requestPath: String) = if (command[T].isSuccess) Some(MultiMap()) else None
   }
 
   /**
@@ -65,9 +64,11 @@ trait CommandSupport extends ParamsValueReaderProperties { this: ScalatraSyntax 
    */
   def ifValid[T <: CommandType](implicit mf: Manifest[T]): RouteMatcher = new CommandRouteMatcher[T]
 
-
+*/
 }
-
+/*
 trait ParamsOnlyCommandSupport extends CommandSupport { this: ScalatraSyntax =>
   type CommandType = ParamsOnlyCommand
 }
+
+ */

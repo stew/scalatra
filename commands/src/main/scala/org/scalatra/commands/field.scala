@@ -1,27 +1,147 @@
 package org.scalatra
 package commands
 
+import util._
+import conversion._
 import validation._
-import util.conversion._
 import scalaz._
 import Scalaz._
 import mojolly.inflector.InflectorImports._
 import org.scalatra.util.RicherString._
-import validation._
 
 object DefVal {
   def apply[T:Manifest](prov: => T) = new DefVal(prov)
 }
+
 class DefVal[T:Manifest](valueProvider: => T) {
   lazy val value = valueProvider
 }
-object ValueSource extends Enumeration {
-  val Header = Value("header")
-  val Body = Value("body")
-  val Query = Value("query")
-  val Path = Value("path")
+
+class BinderOps[A, S, V <: Binder[A]](v: V) {
+  def bindTo(data: BodySource[S], params: MultiParams, headers: Map[String,String])(implicit binding: Binding[A,V,S]) : FieldValidation[A] = {
+    binding.apply(v, data, params, headers)
+    v.validate
+  }
 }
 
+trait Binding[A, V <: Binder[A], S] {
+  def apply(binder: V, data: BodySource[S], params: MultiParams, headers: Map[String,String]) : Unit
+}
+
+object Binding {
+  implicit def chainedBinding[B, A, F <: Binder[B], S](implicit bbinding: Binding[B, F, S]) : Binding[A, ChainedBinder[B, A, F], S] = new Binding[A, ChainedBinder[B, A, F], S] {
+    def apply(binder: ChainedBinder[B,A,F], data: BodySource[S], params: MultiParams, headers: Map[String,String]) = {
+      bbinding.apply(binder.previous, data, params, headers)
+    }
+  }
+
+  implicit def headerBinding[A, S](implicit tcf: TypeConverterFactory[A]): Binding[A,HeaderBinder[A],S] = new Binding[A,HeaderBinder[A],S] {
+    def apply(binder: HeaderBinder[A], data: BodySource[S], params: MultiParams, headers: Map[String,String]) = {
+      val tc: TypeConverter[String, A] = tcf.resolveStringParams
+      val result = for {
+        header <- headers.get(binder.field).toSuccess(NonEmptyList(ValidationError("%s is required".format(binder.field), binder.field.some, NotFound.some)))
+        converted <- tc(header).toSuccess(NonEmptyList(ValidationError("error converting %s".format(binder.field), binder.field.some, ValidationFail.some)))
+      } yield(converted)
+      binder.bound = result
+    }
+  }
+
+  implicit def bodyBinding[A, S](implicit r: S => ValueReader[S, A]): Binding[A,BodyBinder[A],S] = new Binding[A,BodyBinder[A],S] {
+    def apply(binder: BodyBinder[A], data: BodySource[S], params: MultiParams, headers: Map[String,String]) = {
+      val result = data.read(binder.field) match {
+        case Left(e) => NonEmptyList(ValidationError("unknown error fetching %s".format(binder.field), binder.field.some, UnknownError.some)).fail
+        case Right(None) => NonEmptyList(ValidationError("%s is required".format(binder.field), binder.field.some, NotFound.some)).fail
+        case Right(Some(a)) => a.successNel
+      }
+      binder.bound = result
+    }
+  }
+
+  implicit def queryBinding[A, S](implicit tcf: TypeConverterFactory[A], multiParams: MultiParams => ValueReader[MultiParams, Seq[String]]): Binding[A,QueryBinder[A],S] = new Binding[A,QueryBinder[A],S] {
+    def apply(binder: QueryBinder[A], data: BodySource[S], params: MultiParams, headers: Map[String,String]) = {
+      val result = params.read(binder.field) match {
+        case Left(e) => NonEmptyList(ValidationError("unknown error fetching %s".format(binder.field), binder.field.some, UnknownError.some)).fail
+        case Right(None) => NonEmptyList(ValidationError("%s is required".format(binder.field), binder.field.some, NotFound.some)).fail
+        case Right(Some(a)) => tcf.resolveMultiParams(a).toSuccess(NonEmptyList(ValidationError("unknown error fetching %s".format(binder.field), binder.field.some, UnknownError.some)))
+      }
+      binder.bound = result
+    }
+  }
+}
+
+object Binder {
+  implicit def toOps[A, S, V <: Binder[A]](b: V) : BinderOps[A,S,V] = new BinderOps(b)
+}
+
+sealed trait Binder[A] {
+  /**
+    Used to document which field caused a failure
+    */
+  def field : String
+
+  /**
+    Validate the value.
+    this separateion allows us to have a two staged bind + validate.
+    */
+  def validate: FieldValidation[A]
+  /**
+    validate a new validation to this binder
+    */
+  def validateWith(validators: Validator[A]*) : Binder[A] = {
+    // This could just be validators.suml if we accept a List[Validator[A]] instead of varargs, hmm
+    // but anyway... collapses all the validators into a single validator which returns multiple possible failures.
+    // which perhaps we don't want, we might perhaps just want the first failure
+    val validator : Validator[A] = if(validators.isEmpty) Monoid[Validator[A]].zero else validators.tail.foldLeft(validators.head)(_ |+| _)
+
+    // we ask for validators which fail with a string.  we compose the
+    // given function with one that maps a failure from a String to a
+    // ValidationError
+    val fieldValidator = validator andThen (_.bimap(_.map((e:String) => Validators.formatFailure(field,e)), identity))
+
+    ValueValidation(this, fieldValidator)
+  }
+
+  def map[B](f: A=>B): Binder[B] = ValueMap(this, f)
+  def flatMap[B](f: A=> Binder[B]): Binder[B] = ValueFlatMap(this, f)
+}
+
+/**
+  A Binder which actually directly binds to a piece of data
+  */
+sealed trait ValueBinder[A] extends Binder[A] {
+  var bound : FieldValidation[A] = _
+  final def validate: FieldValidation[A] = bound
+}
+
+/**
+  A binder which binds to some other binder
+  */
+abstract class ChainedBinder[B, A, F <: Binder[B]](val previous: F) extends Binder[A] {
+  def field = previous.field
+}
+
+case class ValueMap[B,A, F <: Binder[B]](previous: F, transform: B=>A) extends ChainedBinder[B,A,F](previous) 
+{
+  def validate: FieldValidation[A] = previous.validate map transform
+}
+
+case class ValueFlatMap[B, A, F <: Binder[B]](previous: F, transform: B=>Binder[A]) extends ChainedBinder[B,A,F](previous) 
+{
+  def validate: FieldValidation[A] = {
+    previous.validate.fold(_.fail, transform(_).validate)
+  }
+}
+
+case class ValueValidation[A, F <: Binder[A]](previous: F, validator: FieldValidator[A]) extends ChainedBinder[A,A,F](previous) {
+  def validate: FieldValidation[A] = previous.validate flatMap validator
+}
+
+case class HeaderBinder[A](field: String) extends ValueBinder[A] 
+case class BodyBinder[A](field: String) extends ValueBinder[A]  
+case class QueryBinder[A](field: String) extends ValueBinder[A]
+
+
+/*
 object FieldDescriptor {
   def apply[T](name: String)(implicit mf: Manifest[T], defV: DefaultValue[T]): FieldDescriptor[T] = 
     new BasicFieldDescriptor[T](name, transformations = identity, defVal = DefVal(defV.default))
@@ -291,7 +411,8 @@ class Field[A:Manifest](descr: FieldDescriptor[A], command: Command) {
   def description: String = descr.description
   
   def isRequired: Boolean = descr.isRequired
-  def valueSource: ValueSource.Value = descr.valueSource
+  def valueSource: ValueBinder.Value = descr.valueSource
   def allowableValues = descr.allowableValues
   def displayName: Option[String] = descr.displayName
 }
+ */

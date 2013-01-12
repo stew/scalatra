@@ -7,6 +7,7 @@ import org.scalatra.util.conversion._
 import org.joda.time.DateTime
 import java.util.Date
 import org.scalatra.util.ValueReader
+import util._
 
 trait JsonBindingImplicits extends BindingImplicits with JsonImplicitConversions {
 
@@ -23,6 +24,14 @@ trait JsonTypeConverterFactory[T] extends TypeConverterFactory[T] with JsonBindi
 }
 
 trait JsonTypeConverterFactories extends JsonBindingImplicits {
+
+  def typeConverterBuilder[I](tc: TypeConverterFactory[_]): PartialFunction[ValueReader[_, _], TypeConverter[I, _]] = {
+    case r: MultiParamsValueReader => tc.resolveMultiParams.asInstanceOf[TypeConverter[I, _]]
+    case r: MultiMapHeadViewValueReader[_] => tc.resolveStringParams.asInstanceOf[TypeConverter[I, _]]
+    case r: StringMapValueReader => tc.resolveStringParams.asInstanceOf[TypeConverter[I, _]]
+    case r => throw new BindingException("No converter found for value reader: " + r.getClass.getSimpleName)
+  }
+
   implicit def jsonTypeConverterFactory[T](implicit
                                            seqConverter: TypeConverter[Seq[String], T],
                                            stringConverter: TypeConverter[String, T],
