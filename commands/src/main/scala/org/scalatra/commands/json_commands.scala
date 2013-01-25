@@ -18,20 +18,19 @@ trait JsonBindingImplicits extends BindingImplicits with JsonImplicitConversions
     safeOption(_.extractOpt[String].flatMap(df.parse).map(_.toDate))
 
 }
-
+/*
 trait JsonTypeConverterFactory[T] extends TypeConverterFactory[T] with JsonBindingImplicits {
   def resolveJson: TypeConverter[JValue, T]
 }
 
 trait JsonTypeConverterFactories extends JsonBindingImplicits {
-
+/*
   def typeConverterBuilder[I](tc: TypeConverterFactory[_]): PartialFunction[ValueReader[_, _], TypeConverter[I, _]] = {
     case r: MultiParamsValueReader => tc.resolveMultiParams.asInstanceOf[TypeConverter[I, _]]
     case r: MultiMapHeadViewValueReader[_] => tc.resolveStringParams.asInstanceOf[TypeConverter[I, _]]
     case r: StringMapValueReader => tc.resolveStringParams.asInstanceOf[TypeConverter[I, _]]
     case r => throw new BindingException("No converter found for value reader: " + r.getClass.getSimpleName)
   }
-
   implicit def jsonTypeConverterFactory[T](implicit
                                            seqConverter: TypeConverter[Seq[String], T],
                                            stringConverter: TypeConverter[String, T],
@@ -43,16 +42,19 @@ trait JsonTypeConverterFactories extends JsonBindingImplicits {
     def resolveMultiParams: TypeConverter[Seq[String], T] = seqConverter
     def resolveStringParams: TypeConverter[String, T] = stringConverter
   }
+ */
+
 }
-
+/*
 class JsonTypeConverterFactoriesImports(implicit protected val jsonFormats: Formats) extends JsonTypeConverterFactories
-
+ */
 trait JsonCommand extends Command with JsonTypeConverterFactories {
 
   type CommandTypeConverterFactory[T] = JsonTypeConverterFactory[T]
-
+/*
   override def typeConverterBuilder[I](tc: CommandTypeConverterFactory[_]) = ({
     case r: JsonValueReader => tc.resolveJson.asInstanceOf[TypeConverter[I, _]]
   }: PartialFunction[ValueReader[_, _], TypeConverter[I, _]]) orElse super.typeConverterBuilder(tc)
-
+ */
 }
+ */

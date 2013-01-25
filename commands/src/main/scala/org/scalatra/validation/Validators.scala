@@ -105,9 +105,9 @@ object Validators {
    */
   def oneOf[TResult](expected: TResult*) : Validator[TResult] = (value: TResult) => {
       if(expected contains value)
-        value.successNel
+        value.success
       else
-        ("%s must be one of " + expected.mkString("[", ", ", "]")).failNel
+        ("%s must be one of " + expected.mkString("[", ", ", "]")).fail
   }
 
   /**
@@ -120,8 +120,8 @@ object Validators {
         val u = URI.create(url).normalize()
         !absolute || u.isAbsolute
        }).isDefined && (allowLocalHost || UrlValidator.getInstance().isValid(url)))
-      url.successNel
+      url.success
     else
-    "%s must be a valid url.".failNel
+    "%s must be a valid url.".fail
   }
 }

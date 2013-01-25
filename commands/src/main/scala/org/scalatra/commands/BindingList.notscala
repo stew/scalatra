@@ -1,6 +1,13 @@
 package org.scalatra
 package commands
 
+/**
+  *  A Heterogenous list of Binder objects.  The idea here is that if
+  *  we store the Binders in a HList, we will retain the types being
+  *  bound to, which allows us to do a typesafe search of the implicit
+  *  scope *at the bind site* for any TypeConverter objects which will
+  *  be needed to do binding.
+  */
 sealed trait BindingList {
   def validate : Unit
   def bindTo[S](data: BodySource[S], params: MultiParams, headers: Map[String,String])(implicit binding: ListBinding[this.type, S]) = {
@@ -30,7 +37,7 @@ object ListBinding {
   implicit def nilBinding[S] : ListBinding[BNil,S] = new ListBinding[BNil, S] {
     def apply(l: BNil, data: BodySource[S], params: MultiParams, headers: Map[String,String]) {}
   }
-  implicit def someBinding[H, T <: BindingList, S](implicit restBinding: ListBinding[T, S], binding: Binding[_,_,_]) : ListBinding[H :: T, S] = new ListBinding[H :: T, S] {
+  implicit def someBinding[H, T <: BindingList, S](implicit restBinding: ListBinding[T, S], binding: Binding[_,_]) : ListBinding[H :: T, S] = new ListBinding[H :: T, S] {
     def apply(l: H :: T, data: BodySource[S], params: MultiParams, headers: Map[String,String]) {
       l.head.bindTo(data, params, headers)(binding)
       restBinding.apply(l.tail,data, params, headers)

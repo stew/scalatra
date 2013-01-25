@@ -6,14 +6,15 @@ import grizzled.slf4j.Logger
 import validation._
 import scalaz._
 import Scalaz._
-/*
-trait CommandHandler { 
+
+trait CommandHandler[A] { 
   @transient private[this] val commandLogger: Logger = Logger[this.type]
-  def execute[S: Manifest](cmd: ModelCommand[S]): FieldValidation[S] = {
+  def execute(cmd: Command): CommandValidation[A] = {
     commandLogger.debug("Executing [%s].\n%s" format (cmd.getClass.getName, cmd))
     if (cmd.isValid) {
       val res = (allCatch withApply (serverError(cmd.getClass.getName, _))) {
-        handle.lift(cmd).map(_.map(_.asInstanceOf[S])) | ValidationError("Don't know how to handle: " + cmd.getClass.getName, UnknownError).failNel
+        
+        handle.lift(cmd) | NonEmptyList(ValidationError("Don't know how to handle: " + cmd.getClass.getName, UnknownError)).fail
       }
 
       val resultLog = res.fold(
@@ -30,13 +31,13 @@ trait CommandHandler {
     }
   }
 
-  private[this] def serverError[R](cmdName: String, ex: Throwable): FieldValidation[R] = {
+  private[this] def serverError[R](cmdName: String, ex: Throwable): CommandValidation[R] = {
     commandLogger.error("There was an error while executing " + cmdName, ex)
     ValidationError("An error occurred while handling: " + cmdName, UnknownError).failNel[R]
   }
 
-  type Handler = PartialFunction[ModelCommand[_], FieldValidation[_]]
+  type Handler[A] = PartialFunction[Command, CommandValidation[A]]
 
-  protected def handle: Handler
+  protected def handle: Handler[A]
 }
- */
+

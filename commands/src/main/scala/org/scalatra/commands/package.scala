@@ -9,8 +9,9 @@ import org.joda.time.{ DateTime, DateTimeZone }
 
 package object commands extends DefaultValues {
 
-  type FieldValidation[T] = ValidationNEL[ValidationError, T]
-  type StringValidation[T] = ValidationNEL[String, T]
+  type CommandValidation[T] = ValidationNEL[ValidationError, T]
+  type FieldValidation[T] = Validation[ValidationError, T]
+  type StringValidation[T] = Validation[String, T]
 
   type Validator[T] = T => StringValidation[T]
   type FieldValidator[T] = T => FieldValidation[T]

@@ -5,7 +5,7 @@ import org.scalatra.commands._
 import org.scalatra.util.RicherString._
 import scalaz._
 import Scalaz._
-
+/*
 object SwaggerCommandSupport {
   
   private[this] val paramtypeMapping = 
@@ -82,3 +82,4 @@ trait SwaggerCommandSupport { this: ScalatraSyntax with SwaggerSupportBase with 
       }
     }
 }
+ */
